@@ -19,7 +19,8 @@ func Middleware(tel *Telemetry) func(http.Handler) http.Handler {
 			r = r.WithContext(ctx)
 
 			// Start tracing span for HTTP request
-			ctx, span := StartSpan(ctx, "HTTP "+r.Method+" "+r.URL.Path,
+			spanName := tel.GetServiceName() + " HTTP " + r.Method + " " + r.URL.Path
+			ctx, span := StartSpan(ctx, spanName,
 				trace.WithAttributes(
 					attribute.String("http.method", r.Method),
 					attribute.String("http.url", r.URL.String()),
@@ -27,6 +28,7 @@ func Middleware(tel *Telemetry) func(http.Handler) http.Handler {
 					attribute.String("http.host", r.Host),
 					attribute.String("http.route", r.URL.Path),
 					attribute.String("user_agent", r.UserAgent()),
+					attribute.String("service.name", tel.GetServiceName()),
 				),
 			)
 			defer span.End()
@@ -93,4 +95,3 @@ func getStatusClass(statusCode int) string {
 		return "unknown"
 	}
 }
-

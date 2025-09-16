@@ -7,7 +7,7 @@ import (
 	"github.com/draftea/payment-system/shared/events"
 	"github.com/draftea/payment-system/shared/models"
 	"github.com/draftea/payment-system/wallet-service/domain"
-	"github.com/draftea/payment-system/wallet-service/telemetry"
+	"github.com/draftea/payment-system/shared/telemetry"
 	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"

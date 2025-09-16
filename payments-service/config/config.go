@@ -10,11 +10,12 @@ import (
 )
 
 type Config struct {
-	ServiceName string   `mapstructure:"service_name"`
-	Env         string   `mapstructure:"env"`
-	Port        string   `mapstructure:"port"`
-	Database    Database `mapstructure:"database"`
-	AWS         AWS      `mapstructure:"aws"`
+	ServiceName string    `mapstructure:"service_name"`
+	Env         string    `mapstructure:"env"`
+	Port        string    `mapstructure:"port"`
+	Database    Database  `mapstructure:"database"`
+	AWS         AWS       `mapstructure:"aws"`
+	Telemetry   Telemetry `mapstructure:"telemetry"`
 }
 
 type Database struct {
@@ -34,6 +35,11 @@ type AWS struct {
 	EndpointSQS     string `mapstructure:"endpoint_sqs"`
 	SNSTopicArn     string `mapstructure:"sns_topic_arn"`
 	SQSQueueURL     string `mapstructure:"sqs_queue_url"`
+}
+
+type Telemetry struct {
+	Enabled      bool   `mapstructure:"enabled"`
+	OTLPEndpoint string `mapstructure:"otlp_endpoint"`
 }
 
 func ReadConfig() (*Config, error) {
@@ -106,6 +112,10 @@ func setDefaultsFromEnv() {
 	viper.SetDefault("aws.endpoint_sqs", getEnv("AWS_ENDPOINT_URL_SQS", "http://localhost:4566"))
 	viper.SetDefault("aws.sns_topic_arn", getEnv("SNS_TOPIC_ARN", "arn:aws:sns:us-east-1:000000000000:payment-events"))
 	viper.SetDefault("aws.sqs_queue_url", getEnv("SQS_QUEUE_URL", "http://localhost:4566/000000000000/payment-events"))
+
+	// Telemetry defaults
+	viper.SetDefault("telemetry.otlp_endpoint", getEnv("OTLP_ENDPOINT", "http://localhost:4318"))
+	viper.SetDefault("telemetry.enabled", getEnv("TELEMETRY_ENABLED", "true") == "true")
 }
 
 func getEnv(key, defaultValue string) string {

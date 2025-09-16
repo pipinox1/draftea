@@ -9,7 +9,7 @@ import (
 	"github.com/draftea/payment-system/wallet-service/application"
 	"github.com/draftea/payment-system/wallet-service/handlers"
 	"github.com/draftea/payment-system/wallet-service/infrastructure"
-	"github.com/draftea/payment-system/wallet-service/telemetry"
+	"github.com/draftea/payment-system/shared/telemetry"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 )
@@ -47,7 +47,8 @@ func BuildDependencies(ctx context.Context, config *Config) (*Dependencies, erro
 
 	// Initialize telemetry first
 	if config.Telemetry.Enabled {
-		tel, telemetryShutdown, err := telemetry.InitTelemetry(ctx, config.Telemetry.OTLPEndpoint)
+		telConfig := telemetry.WalletServiceConfig.WithOTLPEndpoint(config.Telemetry.OTLPEndpoint)
+		tel, telemetryShutdown, err := telemetry.InitTelemetry(ctx, telConfig)
 		if err != nil {
 			log.Printf("Failed to initialize telemetry: %v", err)
 			// Continue without telemetry rather than failing

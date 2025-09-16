@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/draftea/payment-system/payments-service/config"
+	"github.com/draftea/payment-system/payments-service/handlers"
+	"github.com/draftea/payment-system/shared/telemetry"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
@@ -25,7 +27,8 @@ func main() {
 	fmt.Printf("Starting %s in %s environment on port %s\n", cfg.ServiceName, cfg.Env, cfg.Port)
 
 	// Initialize dependencies
-	deps, err := config.BuildDependencies(cfg)
+	ctx := context.Background()
+	deps, err := config.BuildDependencies(ctx, cfg)
 	if err != nil {
 		log.Fatalf("Failed to build dependencies: %v", err)
 	}
@@ -87,11 +90,19 @@ func setupRouter(cfg *config.Config, deps *config.Dependencies) *chi.Mux {
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Timeout(60 * time.Second))
 
+	// Telemetry middleware (inject telemetry into context)
+	if deps.Telemetry != nil {
+		r.Use(telemetry.Middleware(deps.Telemetry))
+	}
+
 	// Health check
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("OK"))
 	})
+
+	// Metrics endpoint for Prometheus
+	r.Handle("/metrics", handlers.NewMetricsHandler())
 
 	// Register payment routes
 	deps.PaymentHandlers.RegisterRoutes(r)

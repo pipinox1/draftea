@@ -18,23 +18,35 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-const (
-	ServiceName    = "wallet-service"
-	ServiceVersion = "1.0.0"
-)
+// Config holds telemetry configuration for a service
+type Config struct {
+	ServiceName    string
+	ServiceVersion string
+	OTLPEndpoint   string
+}
 
 type Telemetry struct {
 	tracer trace.Tracer
 	meter  metric.Meter
+	config Config
+}
+
+// NewTelemetry creates a new telemetry instance with the given config
+func NewTelemetry(config Config) *Telemetry {
+	return &Telemetry{
+		config: config,
+		tracer: otel.Tracer(config.ServiceName),
+		meter:  otel.Meter(config.ServiceName),
+	}
 }
 
 // InitTelemetry initializes OpenTelemetry with OTLP and Prometheus exporters
-func InitTelemetry(ctx context.Context, otlpEndpoint string) (*Telemetry, func(), error) {
+func InitTelemetry(ctx context.Context, config Config) (*Telemetry, func(), error) {
 	// Create resource
 	res, err := resource.New(ctx,
 		resource.WithAttributes(
-			semconv.ServiceNameKey.String(ServiceName),
-			semconv.ServiceVersionKey.String(ServiceVersion),
+			semconv.ServiceNameKey.String(config.ServiceName),
+			semconv.ServiceVersionKey.String(config.ServiceVersion),
 		),
 	)
 	if err != nil {
@@ -42,13 +54,13 @@ func InitTelemetry(ctx context.Context, otlpEndpoint string) (*Telemetry, func()
 	}
 
 	// Set up tracing
-	traceProvider, traceShutdown, err := setupTracing(ctx, res, otlpEndpoint)
+	traceProvider, traceShutdown, err := setupTracing(ctx, res, config.OTLPEndpoint)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	// Set up metrics
-	meterProvider, metricShutdown, err := setupMetrics(ctx, res, otlpEndpoint)
+	meterProvider, metricShutdown, err := setupMetrics(ctx, res, config.OTLPEndpoint)
 	if err != nil {
 		traceShutdown()
 		return nil, nil, err
@@ -61,8 +73,9 @@ func InitTelemetry(ctx context.Context, otlpEndpoint string) (*Telemetry, func()
 
 	// Create telemetry instance
 	tel := &Telemetry{
-		tracer: otel.Tracer(ServiceName),
-		meter:  otel.Meter(ServiceName),
+		config: config,
+		tracer: otel.Tracer(config.ServiceName),
+		meter:  otel.Meter(config.ServiceName),
 	}
 
 	// Combined shutdown function
@@ -144,6 +157,11 @@ func (t *Telemetry) GetMeter() metric.Meter {
 	return t.meter
 }
 
+// GetServiceName returns the service name
+func (t *Telemetry) GetServiceName() string {
+	return t.config.ServiceName
+}
+
 // Context key for telemetry
 type contextKey string
 
@@ -180,6 +198,14 @@ func GetMeter(ctx context.Context) metric.Meter {
 	return otel.Meter("fallback")
 }
 
+// GetServiceName returns service name from context
+func GetServiceName(ctx context.Context) string {
+	if tel := FromContext(ctx); tel != nil {
+		return tel.GetServiceName()
+	}
+	return "unknown"
+}
+
 // RecordCounter records a counter metric
 func RecordCounter(ctx context.Context, name, description string, value int64, attrs ...attribute.KeyValue) {
 	meter := GetMeter(ctx)
@@ -187,6 +213,11 @@ func RecordCounter(ctx context.Context, name, description string, value int64, a
 	if err != nil {
 		return
 	}
+
+	// Add service name to attributes if not already present
+	serviceName := GetServiceName(ctx)
+	attrs = append(attrs, attribute.String("service", serviceName))
+
 	counter.Add(ctx, value, metric.WithAttributes(attrs...))
 }
 
@@ -197,6 +228,11 @@ func RecordHistogram(ctx context.Context, name, description string, value float6
 	if err != nil {
 		return
 	}
+
+	// Add service name to attributes if not already present
+	serviceName := GetServiceName(ctx)
+	attrs = append(attrs, attribute.String("service", serviceName))
+
 	histogram.Record(ctx, value, metric.WithAttributes(attrs...))
 }
 
@@ -207,5 +243,10 @@ func RecordGauge(ctx context.Context, name, description string, value float64, a
 	if err != nil {
 		return
 	}
+
+	// Add service name to attributes if not already present
+	serviceName := GetServiceName(ctx)
+	attrs = append(attrs, attribute.String("service", serviceName))
+
 	gauge.Record(ctx, value, metric.WithAttributes(attrs...))
 }

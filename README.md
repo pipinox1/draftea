@@ -110,11 +110,13 @@ draftea/
 │   ├── architecture-overview.md
 │   ├── payment-service-overview.md
 │   ├── wallet-service-overview.md
+│   ├── telemetry-overview.md
 │   └── event-catalog.md
 ├── shared/                     # Shared code
 │   ├── models/                # Domain models
 │   ├── events/                # Domain events
-│   └── infrastructure/        # Event store, messaging
+│   ├── infrastructure/        # Event store, messaging
+│   └── telemetry/             # Shared OpenTelemetry system
 ├── payments-service/          # Payment service
 │   ├── config/               # Configuration management
 │   ├── domain/               # Business logic
@@ -126,8 +128,7 @@ draftea/
 │   ├── domain/               # Business logic
 │   ├── application/          # Use cases & event handlers
 │   ├── infrastructure/       # PostgreSQL repositories
-│   ├── handlers/             # HTTP endpoints
-│   └── telemetry/           # OpenTelemetry implementation
+│   └── handlers/             # HTTP endpoints
 ├── cmd/                      # Main applications
 │   ├── payments-service/     # Payment service main
 │   └── wallet-service/       # Wallet service main
@@ -229,10 +230,11 @@ go test -v ./...
 ### Available Services
 
 - **Payment Service**: http://localhost:8080
-  - API Base: `/api/v1/`
+  - API Base: `/api/v1/payments`
   - Health: `/health`
+  - Metrics: `/metrics` (Prometheus)
 - **Wallet Service**: http://localhost:8081
-  - API Base: `/api/v1/`
+  - API Base: `/api/v1/wallets` `/api/v1/movements`
   - Health: `/health`
   - Metrics: `/metrics` (Prometheus)
 - **LocalStack (AWS)**: http://localhost:4566
@@ -302,14 +304,33 @@ aws --endpoint-url=http://localhost:4566 sqs receive-message \
 aws --endpoint-url=http://localhost:4566 sns list-topics
 ```
 
-### Telemetry (Wallet Service)
+### Shared Telemetry System
 
-The wallet service includes comprehensive OpenTelemetry instrumentation:
-- **Traces**: Distributed tracing for request flows
+Both services now use a **unified telemetry system** (`/shared/telemetry/`) with comprehensive OpenTelemetry instrumentation:
+
+#### Features
+- **Traces**: Distributed tracing across all services
 - **Metrics**: Custom business metrics (counters, histograms, gauges)
-- **Context Injection**: Middleware-based telemetry context
-- **OTLP Export**: Compatible with Jaeger, Zipkin, etc.
-- **Prometheus**: Metrics export for monitoring
+- **HTTP Middleware**: Automatic request instrumentation
+- **Dual Export**: OTLP (Jaeger/Zipkin) + Prometheus
+- **Service-Specific Config**: Predefined configs for each service
+- **Context Injection**: Automatic telemetry context propagation
+
+#### Configuration
+```bash
+# Enable/disable telemetry
+TELEMETRY_ENABLED=true
+# OTLP collector endpoint
+OTLP_ENDPOINT=http://localhost:4318
+```
+
+#### Metrics Endpoints
+- Payment Service: http://localhost:8080/metrics
+- Wallet Service: http://localhost:8081/metrics
+
+**Documentation**:
+- [Telemetry Overview](docs/telemetry-overview.md) - System architecture and monitoring
+- [Implementation Guide](shared/telemetry/README.md) - Developer integration guide
 
 ## Database
 
@@ -336,7 +357,7 @@ Pre-configured test wallets:
 - **Repository Pattern**: Domain-driven data access
 - **Factory Pattern**: Type-safe object construction
 - **Event-Driven Architecture**: Asynchronous service communication
-- **OpenTelemetry**: Comprehensive observability (Wallet Service)
+- **Shared Telemetry**: Unified OpenTelemetry system across all services
 - **Configuration Management**: JSON-based config with environment overrides
 - **Dependency Injection**: Clean dependency management pattern
 
@@ -353,12 +374,9 @@ For production deployment:
 1. **Gateway Service**: Real payment provider integration (Stripe, PayPal)
 2. **Auth Service**: RBAC authentication and authorization
 3. **API Gateway**: External API exposure and rate limiting
-4. **Enhanced Observability**: Structured logging, alerting
-5. **Security**: Authentication, encryption, input validation
-6. **Testing**: Comprehensive test coverage (unit, integration, e2e)
-7. **Resilience**: Circuit breakers, retry policies, timeouts
-8. **Deployment**: Kubernetes, CI/CD pipelines
-
----
-
-This system demonstrates a modern microservices architecture implementing saga choreography with event sourcing, following domain-driven design principles and providing comprehensive observability capabilities.
+4. ✅ **Observability**: Comprehensive telemetry system implemented
+5. **Enhanced Logging**: Structured logging and centralized log aggregation
+6. **Security**: Authentication, encryption, input validation
+7. **Testing**: Comprehensive test coverage (unit, integration, e2e)
+8. **Resilience**: Circuit breakers, retry policies, timeouts
+9. **Deployment**: Kubernetes, CI/CD pipelines

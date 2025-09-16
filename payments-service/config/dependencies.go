@@ -1,12 +1,15 @@
 package config
 
 import (
+	"context"
 	"fmt"
+	"log"
 
 	"github.com/draftea/payment-system/payments-service/application"
 	"github.com/draftea/payment-system/payments-service/handlers"
 	"github.com/draftea/payment-system/payments-service/infrastructure"
 	sharedinfra "github.com/draftea/payment-system/shared/infrastructure"
+	"github.com/draftea/payment-system/shared/telemetry"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 )
@@ -39,10 +42,27 @@ type Dependencies struct {
 	// Infrastructure
 	EventPublisher  *sharedinfra.SNSPublisherAdapter
 	EventSubscriber *sharedinfra.SQSSubscriberAdapter
+
+	// Telemetry
+	Telemetry         *telemetry.Telemetry
+	TelemetryShutdown func()
 }
 
-func BuildDependencies(config *Config) (*Dependencies, error) {
+func BuildDependencies(ctx context.Context, config *Config) (*Dependencies, error) {
 	deps := &Dependencies{}
+
+	// Initialize telemetry first
+	if config.Telemetry.Enabled {
+		telConfig := telemetry.PaymentServiceConfig.WithOTLPEndpoint(config.Telemetry.OTLPEndpoint)
+		tel, telemetryShutdown, err := telemetry.InitTelemetry(ctx, telConfig)
+		if err != nil {
+			log.Printf("Failed to initialize telemetry: %v", err)
+			// Continue without telemetry rather than failing
+		} else {
+			deps.Telemetry = tel
+			deps.TelemetryShutdown = telemetryShutdown
+		}
+	}
 
 	// Initialize database
 	db, err := sqlx.Connect("postgres", config.GetDatabaseURL())
@@ -103,6 +123,11 @@ func BuildDependencies(config *Config) (*Dependencies, error) {
 // Close closes all dependencies
 func (d *Dependencies) Close() error {
 	var errs []error
+
+	// Close telemetry first
+	if d.TelemetryShutdown != nil {
+		d.TelemetryShutdown()
+	}
 
 	if d.DB != nil {
 		if err := d.DB.Close(); err != nil {

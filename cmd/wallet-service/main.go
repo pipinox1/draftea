@@ -12,7 +12,7 @@ import (
 
 	"github.com/draftea/payment-system/wallet-service/config"
 	"github.com/draftea/payment-system/wallet-service/handlers"
-	"github.com/draftea/payment-system/wallet-service/telemetry"
+	"github.com/draftea/payment-system/shared/telemetry"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
