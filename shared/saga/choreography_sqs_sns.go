@@ -13,21 +13,21 @@ type SQSChoreographyEventRouter struct {
 	handlers map[string][]SQSEventHandler
 }
 
-// SQSEventHandler interface for handling Menta events
+// SQSEventHandler interface for handling events
 type SQSEventHandler interface {
-	Handle(ctx context.Context, event *events.MentaEvent) error
+	Handle(ctx context.Context, event *events.Event) error
 }
 
 // SQSEventHandlerFunc wraps function as handler
 type SQSEventHandlerFunc struct {
-	fn func(ctx context.Context, event *events.MentaEvent) error
+	fn func(ctx context.Context, event *events.Event) error
 }
 
-func NewSQSEventHandlerFunc(fn func(ctx context.Context, event *events.MentaEvent) error) *SQSEventHandlerFunc {
+func NewSQSEventHandlerFunc(fn func(ctx context.Context, event *events.Event) error) *SQSEventHandlerFunc {
 	return &SQSEventHandlerFunc{fn: fn}
 }
 
-func (h *SQSEventHandlerFunc) Handle(ctx context.Context, event *events.MentaEvent) error {
+func (h *SQSEventHandlerFunc) Handle(ctx context.Context, event *events.Event) error {
 	return h.fn(ctx, event)
 }
 
@@ -49,7 +49,7 @@ func (r *SQSChoreographyEventRouter) HandlerID() string {
 }
 
 // Handle implements the infrastructure.EventHandler interface
-func (r *SQSChoreographyEventRouter) Handle(ctx context.Context, event *events.MentaEvent) error {
+func (r *SQSChoreographyEventRouter) Handle(ctx context.Context, event *events.Event) error {
 	handlers, exists := r.handlers[event.Topic.String()]
 	if !exists {
 		fmt.Printf("No handlers registered for event type: %s\n", event.Topic.String())
@@ -78,7 +78,7 @@ func NewSQSPaymentInitiatedHandler(eventPublisher events.Publisher) *SQSPaymentI
 	return &SQSPaymentInitiatedHandler{eventPublisher: eventPublisher}
 }
 
-func (h *SQSPaymentInitiatedHandler) Handle(ctx context.Context, event *events.MentaEvent) error {
+func (h *SQSPaymentInitiatedHandler) Handle(ctx context.Context, event *events.Event) error {
 	if event.Topic.String() != events.PaymentCreatedEvent {
 		return nil
 	}
@@ -136,7 +136,7 @@ func NewSQSWalletDebitedHandler(eventPublisher events.Publisher) *SQSWalletDebit
 	return &SQSWalletDebitedHandler{eventPublisher: eventPublisher}
 }
 
-func (h *SQSWalletDebitedHandler) Handle(ctx context.Context, event *events.MentaEvent) error {
+func (h *SQSWalletDebitedHandler) Handle(ctx context.Context, event *events.Event) error {
 	if event.Topic.String() != events.WalletDebitedEvent {
 		return nil
 	}
@@ -176,7 +176,7 @@ func NewSQSInsufficientFundsHandler(eventPublisher events.Publisher) *SQSInsuffi
 	return &SQSInsufficientFundsHandler{eventPublisher: eventPublisher}
 }
 
-func (h *SQSInsufficientFundsHandler) Handle(ctx context.Context, event *events.MentaEvent) error {
+func (h *SQSInsufficientFundsHandler) Handle(ctx context.Context, event *events.Event) error {
 	if event.Topic.String() != events.InsufficientFundsEvent {
 		return nil
 	}
@@ -215,7 +215,7 @@ func NewSQSGatewayProcessingCompletedHandler(eventPublisher events.Publisher) *S
 	return &SQSGatewayProcessingCompletedHandler{eventPublisher: eventPublisher}
 }
 
-func (h *SQSGatewayProcessingCompletedHandler) Handle(ctx context.Context, event *events.MentaEvent) error {
+func (h *SQSGatewayProcessingCompletedHandler) Handle(ctx context.Context, event *events.Event) error {
 	if event.Topic.String() != "gateway.processing.completed" {
 		return nil
 	}
@@ -259,7 +259,7 @@ func NewSQSGatewayProcessingFailedHandler(eventPublisher events.Publisher) *SQSG
 	return &SQSGatewayProcessingFailedHandler{eventPublisher: eventPublisher}
 }
 
-func (h *SQSGatewayProcessingFailedHandler) Handle(ctx context.Context, event *events.MentaEvent) error {
+func (h *SQSGatewayProcessingFailedHandler) Handle(ctx context.Context, event *events.Event) error {
 	if event.Topic.String() != "gateway.processing.failed" {
 		return nil
 	}
@@ -323,7 +323,7 @@ func NewMockGatewayService(eventPublisher events.Publisher) *MockGatewayService 
 	return &MockGatewayService{eventPublisher: eventPublisher}
 }
 
-func (s *MockGatewayService) Handle(ctx context.Context, event *events.MentaEvent) error {
+func (s *MockGatewayService) Handle(ctx context.Context, event *events.Event) error {
 	if event.Topic.String() != "gateway.processing.requested" {
 		return nil
 	}

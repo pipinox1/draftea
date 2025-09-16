@@ -35,14 +35,9 @@ func (a *eventHandlerAdapter) HandlerID() string {
 	return "event-handler-adapter"
 }
 
-func (a *eventHandlerAdapter) Handle(ctx context.Context, event *events.MentaEvent) error {
-	// Convert MentaEvent back to Event
-	domainEvent, err := events.FromMentaEvent(event)
-	if err != nil {
-		return errors.Wrap(err, "failed to convert from menta event")
-	}
-
-	return a.handler.Handle(ctx, domainEvent)
+func (a *eventHandlerAdapter) Handle(ctx context.Context, event *events.Event) error {
+	// No conversion needed anymore since we're using the unified Event type
+	return a.handler.Handle(ctx, event)
 }
 
 // Subscribe implements events.Subscriber interface

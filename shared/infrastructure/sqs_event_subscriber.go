@@ -22,23 +22,23 @@ const (
 
 type sqsMessage struct {
 	Message types.Message
-	Event   *events.MentaEvent
+	Event   *events.Event
 	Err     error
 }
 
-// EventHandler wraps the Menta Handler interface
+// EventHandler wraps the Event Handler interface
 type EventHandler interface {
 	HandlerID() string
-	Handle(ctx context.Context, event *events.MentaEvent) error
+	Handle(ctx context.Context, event *events.Event) error
 }
 
 // EventHandlerFunc creates a handler from a function
 type EventHandlerFunc struct {
 	id string
-	fn func(ctx context.Context, event *events.MentaEvent) error
+	fn func(ctx context.Context, event *events.Event) error
 }
 
-func NewEventHandlerFunc(id string, fn func(ctx context.Context, event *events.MentaEvent) error) *EventHandlerFunc {
+func NewEventHandlerFunc(id string, fn func(ctx context.Context, event *events.Event) error) *EventHandlerFunc {
 	return &EventHandlerFunc{
 		id: id,
 		fn: fn,
@@ -49,7 +49,7 @@ func (h *EventHandlerFunc) HandlerID() string {
 	return h.id
 }
 
-func (h *EventHandlerFunc) Handle(ctx context.Context, event *events.MentaEvent) error {
+func (h *EventHandlerFunc) Handle(ctx context.Context, event *events.Event) error {
 	return h.fn(ctx, event)
 }
 
@@ -281,7 +281,7 @@ func (s *SQSEventSubscriber) read(ctx context.Context) error {
 	}
 
 	for _, message := range output.Messages {
-		var event *events.MentaEvent
+		var event *events.Event
 		if err := json.Unmarshal([]byte(*message.Body), &event); err != nil {
 			continue // Skip malformed messages
 		}

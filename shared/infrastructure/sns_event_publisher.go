@@ -45,18 +45,8 @@ func (p *SNSEventPublisher) Publish(ctx context.Context, evts ...*events.Event) 
 		return nil
 	}
 
-	// Convert to Menta events
-	mentaEvents := make([]*events.MentaEvent, len(evts))
-	for i, event := range evts {
-		mentaEvent, err := events.ToMentaEvent(event)
-		if err != nil {
-			return errors.Wrap(err, "failed to convert to menta event")
-		}
-		mentaEvents[i] = mentaEvent
-	}
-
 	// Split into batches
-	batchEvents := splitToChunks(mentaEvents, maxBatchSize)
+	batchEvents := splitToChunks(evts, maxBatchSize)
 
 	gr, ctx := errgroup.WithContext(ctx)
 
@@ -70,7 +60,7 @@ func (p *SNSEventPublisher) Publish(ctx context.Context, evts ...*events.Event) 
 	return gr.Wait()
 }
 
-func (p *SNSEventPublisher) batchPublish(ctx context.Context, events []*events.MentaEvent) error {
+func (p *SNSEventPublisher) batchPublish(ctx context.Context, events []*events.Event) error {
 	requests := make([]types.PublishBatchRequestEntry, len(events))
 
 	for i, event := range events {
@@ -80,7 +70,7 @@ func (p *SNSEventPublisher) batchPublish(ctx context.Context, events []*events.M
 		}
 
 		message := &snsMessage{
-			ID:        event.ID,
+			ID:        event.ID.String(),
 			Metadata:  event.Metadata,
 			Topic:     string(event.Topic),
 			Payload:   payload,
@@ -111,7 +101,7 @@ func (p *SNSEventPublisher) batchPublish(ctx context.Context, events []*events.M
 		}
 
 		requests[i] = types.PublishBatchRequestEntry{
-			Id:                aws.String(event.ID),
+			Id:                aws.String(event.ID.String()),
 			Message:           aws.String(string(msgJson)),
 			MessageAttributes: attrs,
 		}
@@ -132,7 +122,7 @@ func (p *SNSEventPublisher) batchPublish(ctx context.Context, events []*events.M
 	for _, event := range events {
 		success := true
 		for _, entry := range res.Failed {
-			if event.ID == *entry.Id {
+			if event.ID.String() == *entry.Id {
 				success = false
 				break
 			}

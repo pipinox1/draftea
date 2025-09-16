@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/draftea/payment-system/shared/events"
@@ -187,9 +188,19 @@ func (es *PostgresEventStore) toDomain(pgEvent *postgresEvent) (*events.Event, e
 		return nil, errors.Wrap(err, "failed to unmarshal event data")
 	}
 
-	var metadata map[string]interface{}
-	if err := json.Unmarshal(pgEvent.Metadata, &metadata); err != nil {
+	var rawMetadata map[string]interface{}
+	if err := json.Unmarshal(pgEvent.Metadata, &rawMetadata); err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal event metadata")
+	}
+
+	// Convert to events.Metadata (map[string]string)
+	metadata := make(events.Metadata)
+	for k, v := range rawMetadata {
+		if str, ok := v.(string); ok {
+			metadata.Set(k, str)
+		} else {
+			metadata.Set(k, fmt.Sprintf("%v", v))
+		}
 	}
 
 	var correlationID models.ID
@@ -200,9 +211,13 @@ func (es *PostgresEventStore) toDomain(pgEvent *postgresEvent) (*events.Event, e
 		}
 	}
 
+	// Create topic from event type for backward compatibility
+	topic, _ := events.NewTopic(pgEvent.EventType)
+
 	return &events.Event{
 		ID:            id,
 		AggregateID:   aggregateID,
+		Topic:         topic,
 		EventType:     pgEvent.EventType,
 		Version:       pgEvent.Version,
 		Data:          data,
