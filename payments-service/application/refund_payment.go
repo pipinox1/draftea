@@ -105,17 +105,17 @@ func (uc *RefundPayment) validateRefundEligibility(payment *domain.Payment, refu
 	}
 
 	// If partial refund amount is specified, validate it
-	if refundAmount.Amount > 0 {
+	if refundAmount.Amount != 0 {
+		if refundAmount.Amount <= 0 {
+			return errors.New("refund amount must be positive")
+		}
+
 		if refundAmount.Currency != payment.Amount.Currency {
 			return errors.New("refund currency must match payment currency")
 		}
 
 		if refundAmount.Amount > payment.Amount.Amount {
 			return errors.New("refund amount cannot exceed payment amount")
-		}
-
-		if refundAmount.Amount <= 0 {
-			return errors.New("refund amount must be positive")
 		}
 	}
 
