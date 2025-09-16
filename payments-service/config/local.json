@@ -1,0 +1,22 @@
+{
+  "service_name": "payments-service",
+  "env": "local",
+  "port": "8080",
+  "database": {
+    "host": "localhost",
+    "port": 5433,
+    "user": "postgres",
+    "password": "password",
+    "database": "payment_system",
+    "ssl_mode": "disable"
+  },
+  "aws": {
+    "access_key_id": "test",
+    "secret_access_key": "test",
+    "region": "us-east-1",
+    "endpoint_sns": "http://localhost:4566",
+    "endpoint_sqs": "http://localhost:4566",
+    "sns_topic_arn": "arn:aws:sns:us-east-1:000000000000:payment-events",
+    "sqs_queue_url": "http://localhost:4566/000000000000/payment-events"
+  }
+}

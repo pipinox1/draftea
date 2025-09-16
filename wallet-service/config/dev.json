@@ -1,0 +1,26 @@
+{
+  "service_name": "wallet-service",
+  "env": "dev",
+  "port": "8081",
+  "database": {
+    "host": "postgres",
+    "port": 5432,
+    "user": "postgres",
+    "password": "password",
+    "database": "payment_system",
+    "ssl_mode": "disable"
+  },
+  "aws": {
+    "access_key_id": "test",
+    "secret_access_key": "test",
+    "region": "us-east-1",
+    "endpoint_sns": "http://localstack:4566",
+    "endpoint_sqs": "http://localstack:4566",
+    "sns_topic_arn": "arn:aws:sns:us-east-1:000000000000:payment-events",
+    "sqs_queue_url": "http://localstack:4566/000000000000/wallet-events"
+  },
+  "telemetry": {
+    "otlp_endpoint": "http://localhost:4318",
+    "enabled": true
+  }
+}

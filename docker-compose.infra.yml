@@ -1,0 +1,94 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: payment_postgres
+    environment:
+      POSTGRES_DB: payment_system
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/migrations/003_updated_schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # LocalStack for AWS services (SQS/SNS)
+  localstack:
+    image: localstack/localstack:latest
+    container_name: payment_localstack
+    ports:
+      - "4566:4566"
+      - "4510-4559:4510-4559"
+    environment:
+      - SERVICES=sns,sqs
+      - DEBUG=1
+      - DATA_DIR=/var/lib/localstack/data
+      - DOCKER_HOST=unix:///var/run/docker.sock
+    volumes:
+      - localstack_data:/var/lib/localstack
+      - /var/run/docker.sock:/var/run/docker.sock
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # AWS Resources Setup
+  aws-setup:
+    image: amazon/aws-cli:latest
+    container_name: payment_aws_setup
+    depends_on:
+      localstack:
+        condition: service_healthy
+    environment:
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - AWS_DEFAULT_REGION=us-east-1
+      - AWS_ENDPOINT_URL=http://localstack:4566
+    command: |
+      sh -c "
+        echo 'Setting up AWS resources...' &&
+        sleep 5 &&
+
+        # Create SNS topic
+        aws --endpoint-url=http://localstack:4566 sns create-topic --name payment-events &&
+
+        # Create SQS queues
+        aws --endpoint-url=http://localstack:4566 sqs create-queue --queue-name payment-events &&
+        aws --endpoint-url=http://localstack:4566 sqs create-queue --queue-name wallet-events &&
+        aws --endpoint-url=http://localstack:4566 sqs create-queue --queue-name payment-events-dlq &&
+        aws --endpoint-url=http://localstack:4566 sqs create-queue --queue-name wallet-events-dlq &&
+
+        # Subscribe queues to SNS topic
+        aws --endpoint-url=http://localstack:4566 sns subscribe \
+          --topic-arn arn:aws:sns:us-east-1:000000000000:payment-events \
+          --protocol sqs \
+          --notification-endpoint arn:aws:sqs:us-east-1:000000000000:payment-events &&
+
+        aws --endpoint-url=http://localstack:4566 sns subscribe \
+          --topic-arn arn:aws:sns:us-east-1:000000000000:payment-events \
+          --protocol sqs \
+          --notification-endpoint arn:aws:sqs:us-east-1:000000000000:wallet-events &&
+
+        echo 'AWS resources created successfully!' &&
+        echo 'SNS Topic: arn:aws:sns:us-east-1:000000000000:payment-events' &&
+        echo 'SQS Payment Queue: http://localhost:4566/000000000000/payment-events' &&
+        echo 'SQS Wallet Queue: http://localhost:4566/000000000000/wallet-events'
+      "
+
+volumes:
+  postgres_data:
+  localstack_data:
+
+networks:
+  default:
+    name: payment_network
