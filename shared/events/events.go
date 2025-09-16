@@ -147,7 +147,7 @@ type Event struct {
 	CorrelationID models.ID   `json:"correlation_id"`
 }
 
-// Publisher publishes events to event store
+// Publisher publishes events
 type Publisher interface {
 	Publish(ctx context.Context, events ...*Event) error
 }

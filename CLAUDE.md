@@ -61,7 +61,6 @@ make integration-test
 This is a microservices payment system built in Go implementing:
 
 - **Hexagonal Architecture**: Domain, Application, Infrastructure layers
-- **Event Sourcing**: PostgreSQL as event store with immutable events
 - **Saga Choreography**: Event-driven coordination without central orchestrator
 - **CQRS**: Command Query Responsibility Segregation
 
@@ -100,11 +99,11 @@ The system uses **Saga Choreography** where services react to events:
 ## Key Technologies
 
 - **Go 1.23**: Main language
-- **PostgreSQL**: Event store and persistence
+- **PostgreSQL**: Event store and persistence (VARCHAR-based UUIDs, no extensions required)
 - **AWS SQS/SNS**: Messaging (via LocalStack locally)
 - **Chi Router**: HTTP routing
 - **SQLx**: Database operations
-- **UUID**: Entity identification
+- **UUID**: Application-generated entity identification (github.com/google/uuid, stored as VARCHAR(36))
 
 ## Database Schema
 
@@ -116,6 +115,8 @@ Core tables:
 - `wallet_transactions`: Internal wallet transactions (debit/credit)
 - `wallet_movements`: Business movements (income/expense)
 
+All ID fields use VARCHAR(36) to store application-generated UUIDs. No PostgreSQL uuid-ossp extension required.
+
 ## Development Patterns
 
 ### Repository Pattern
@@ -123,9 +124,6 @@ Each domain has its own repository interface in the domain layer with PostgreSQL
 
 ### Event Handlers
 Application layer contains event handlers that process domain events and coordinate with other services.
-
-### Event Store
-All state changes are persisted as events in `event_stream` table with proper versioning and correlation IDs.
 
 ## Environment Configuration
 

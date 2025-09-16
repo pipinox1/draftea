@@ -115,7 +115,6 @@ draftea/
 ├── shared/                     # Shared code
 │   ├── models/                # Domain models
 │   ├── events/                # Domain events
-│   ├── infrastructure/        # Event store, messaging
 │   └── telemetry/             # Shared OpenTelemetry system
 ├── payments-service/          # Payment service
 │   ├── config/               # Configuration management
@@ -337,6 +336,7 @@ OTLP_ENDPOINT=http://localhost:4318
 PostgreSQL automatically initializes with:
 - Event sourcing tables (`event_stream`, `snapshots`)
 - Domain aggregate tables (`payments`, `wallets`, `wallet_transactions`, `wallet_movements`)
+- **UUID Management**: Uses VARCHAR(36) columns with Go-generated UUIDs (no uuid-ossp extension required)
 - Optimized indexes
 - Sample test data (3 wallets with balances)
 
@@ -351,7 +351,6 @@ Pre-configured test wallets:
 
 ### ✅ Implemented
 - **Hexagonal Architecture**: Clean separation of concerns
-- **Event Sourcing**: PostgreSQL as event store with immutable events
 - **Saga Choreography**: Event-driven coordination without central orchestrator
 - **CQRS**: Command Query Responsibility Segregation
 - **Repository Pattern**: Domain-driven data access
